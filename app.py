@@ -28,7 +28,3 @@ def get_video():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
-# مسحنا أسطر app.run والـ port تماماً لأن Vercel لا تحتاجها.
