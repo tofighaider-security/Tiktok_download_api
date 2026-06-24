@@ -28,7 +28,7 @@ def get_video():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-if __name__ == '__main__':
-    # تهيئة المنفذ ديناميكياً ليتوافق مع شروط استضافة Render
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+# مسحنا أسطر app.run والـ port تماماً لأن Vercel لا تحتاجها.
