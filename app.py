@@ -1,17 +1,8 @@
 import os
 from flask import Flask, request, jsonify
 import requests
-import re
 
 app = Flask(__name__)
-
-def clean_tiktok_url(url):
-    # إذا كان الرابط مختصراً، نقوم بفك الاختصار برمجياً
-    if "vt.tiktok.com" in url or "v.douyin.com" in url:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        res = requests.head(url, headers=headers, allow_redirects=True)
-        url = res.url
-    return url
 
 @app.route('/get_video', methods=['GET'])
 def get_video():
@@ -21,19 +12,27 @@ def get_video():
         return jsonify({"status": "error", "message": "Missing url parameter"}), 400
         
     try:
-        full_url = clean_tiktok_url(tiktok_url)
+        # فك الاختصار برمجياً لو الرابط جاي من vt.tiktok
+        if "vt.tiktok.com" in tiktok_url:
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            res = requests.head(tiktok_url, headers=headers, allow_redirects=True)
+            tiktok_url = res.url
+
+        # إرسال الرابط النهائي المستقر مباشرة إلى الـ API الخارجي الشغال
+        api_url = f"https://www.tikwm.com/api/?url={tiktok_url}"
+        response = requests.get(api_url).json()
         
-        # استخراج المعرف الفريد للفيديو باستخدام الـ Regex لضمان الدقة
-        video_id_match = re.search(r'/video/(\d+)', full_url)
-        if not video_id_match:
-            return jsonify({"status": "error", "message": "Invalid TikTok URL structure"}), 400
+        if response.get("code") == 0:
+            video_url = response["data"]["play"]
+            return jsonify({
+                "status": "success",
+                "video_url": video_url
+            })
+        else:
+            return jsonify({"status": "error", "message": "Failed to parse video from tikwm API"}), 400
             
-        video_id = video_id_match.group(1)
-        
-        # استخدام واجهة بديلة ومستقرة ومباشرة لجلب بيانات الفيديو بدون علامة مائية
-        api_url = f"https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id={video_id}"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36'
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
         }
         
         response = requests.get(api_url, headers=headers).json()
